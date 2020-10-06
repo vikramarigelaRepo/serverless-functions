@@ -18,35 +18,88 @@ namespace APIGEECreateAPIKeyHelpers.Function
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest req,
             ILogger log)
         {
-            log.LogInformation("Received a request to convert APIGEE API Expiration Time.");
-
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-            string apiKey = null;
-            //System.DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
-            DateTimeOffset expiryDateTimeOffset = DateTimeOffset.MinValue;
-            if (data != null)
+            log.LogInformation("Received a request to compose json for creating new APIGEE API Credential");
+            try
             {
-                var apiKeyCrendential = new APIGEEAPIKeyCredential();
-                apiKeyCrendential.name = data.name;
-                apiKeyCrendential.keyExpiresIn =  TimeSpan.FromHours(90 * 24).TotalMilliseconds;
-                foreach (var item in data?.credentials)
+                string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+                DeveloperApp developerApp = JsonConvert.DeserializeObject<DeveloperApp>(requestBody);
+                DateTimeOffset expiryDateTimeOffset = DateTimeOffset.MinValue;
+                AppApiKeyCrendential apiKeyCrendential = new AppApiKeyCrendential();
+                if (developerApp != null)
                 {
-                    string keyExpiry = item?.expiresAt;
-                    apiKey = item?.consumerKey;
-                    expiryDateTimeOffset = DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(keyExpiry));
-                    // dtDateTime = dtDateTime.(double.Parse(keyExpiry.Substring(0, keyExpiry.Length - 3))).ToLocalTime();
+                    apiKeyCrendential.Name = developerApp.Name;
+                    apiKeyCrendential.KeyExpiresIn = Convert.ToInt64(TimeSpan.FromHours(90 * 24).TotalMilliseconds);
+                     apiKeyCrendential.ApiProducts = new List<string>();
+                    foreach (var item in developerApp?.Credentials)
+                    {
+                        foreach (var product in item.ApiProducts)
+                        {
+                            apiKeyCrendential.ApiProducts.Add(product.Apiproduct);
+                        }
+                    }
+
                 }
+                return new OkObjectResult(JsonConvert.SerializeObject(apiKeyCrendential));
+            }
+            catch (Exception ex)
+            {
+                throw ex;
             }
 
-            string responseMessage = $" APIGEE API key {apiKey} is expiring on {expiryDateTimeOffset.Date}";
-            return new OkObjectResult((expiryDateTimeOffset.DateTime - DateTime.UtcNow).Days);
         }
     }
 
-    public class APIGEEAPIKeyCredential{
-        public string name { get; set; }
-        public List<string> apiProducts { get; set; }
-        public double keyExpiresIn {get;set;} 
+    public class Attribute
+    {
+        public string Name { get; set; }
+        public string Value { get; set; }
     }
+
+    public class ApiProduct
+    {
+        public string Apiproduct { get; set; }
+        public string Status { get; set; }
+    }
+
+    public class Credential
+    {
+        public List<ApiProduct> ApiProducts { get; set; }
+        public List<object> Attributes { get; set; }
+        public string ConsumerKey { get; set; }
+        public string ConsumerSecret { get; set; }
+        public long ExpiresAt { get; set; }
+        public long IssuedAt { get; set; }
+        public List<object> Scopes { get; set; }
+        public string Status { get; set; }
+    }
+
+    public class DeveloperApp
+    {
+        public string AppFamily { get; set; }
+        public string AppId { get; set; }
+        public List<Attribute> Attributes { get; set; }
+        public string CallbackUrl { get; set; }
+        public long CreatedAt { get; set; }
+        public string CreatedBy { get; set; }
+        public List<Credential> Credentials { get; set; }
+        public string DeveloperId { get; set; }
+        public long LastModifiedAt { get; set; }
+        public string LastModifiedBy { get; set; }
+        public string Name { get; set; }
+        public List<object> Scopes { get; set; }
+        public string Status { get; set; }
+    }
+
+    public class AppApiKeyCrendential
+    {
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("apiProducts")]
+        public List<string> ApiProducts { get; set; }
+
+        [JsonProperty("keyExpiresIn")]
+        public long KeyExpiresIn { get; set; }
+    }
+
 }
