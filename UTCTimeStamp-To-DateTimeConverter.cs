@@ -32,7 +32,8 @@ namespace DateTimeConverterHelpers.Function
                     {
                         AppName = apigeeDeveloperApp.Name,
                         APIKey = credential.ConsumerKey,
-                        ExpirationDate  = DateTimeOffset.FromUnixTimeMilliseconds(credential.ExpiresAt).UtcDateTime
+                        DaysToExpiry = (DateTimeOffset.FromUnixTimeMilliseconds(credential.ExpiresAt).UtcDateTime - DateTime.UtcNow).Days,
+                        ExpirationDate  = DateTimeOffset.FromUnixTimeMilliseconds(credential.ExpiresAt).UtcDateTime.ToShortDateString()
                     };
                 }
             }
