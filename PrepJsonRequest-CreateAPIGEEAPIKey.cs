@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Collections.Generic;
-
+using System.Linq;
 namespace APIGEECreateAPIKeyHelpers.Function
 {
     public static class PrepJsonRequest_CreateAPIGEEAPIKey
@@ -30,11 +30,12 @@ namespace APIGEECreateAPIKeyHelpers.Function
                     apiKeyCrendential.Name = developerApp.Name;
                     apiKeyCrendential.KeyExpiresIn = Convert.ToInt64(TimeSpan.FromHours(90 * 24).TotalMilliseconds);
                     apiKeyCrendential.ApiProducts = new List<string>();
-                    foreach (var item in developerApp?.Credentials)
+                    foreach (var item in developerApp.Credentials)
                     {
                         foreach (var product in item.ApiProducts)
                         {
-                            apiKeyCrendential.ApiProducts.Add(product.Apiproduct);
+                            if (!apiKeyCrendential.ApiProducts.Contains(product.Apiproduct))
+                                apiKeyCrendential.ApiProducts.Add(product.Apiproduct);
                         }
                     }
 
