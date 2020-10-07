@@ -7,6 +7,7 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System.Linq;
 
 namespace DateTimeConverterHelpers.Function
 {
@@ -17,26 +18,26 @@ namespace DateTimeConverterHelpers.Function
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest req,
             ILogger log)
         {
-            log.LogInformation("Received a request to convert APIGEE API Expiration Time.");
+            log.LogInformation("Received a request to get api key credentials.");
 
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-            string apiKey = null;
-            //System.DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
-            DateTimeOffset expiryDateTimeOffset = DateTimeOffset.MinValue;
-            if (data != null)
+            DeveloperApp apigeeDeveloperApp = JsonConvert.DeserializeObject<DeveloperApp>(requestBody);
+            AppRecentCredential appRecentCredential = null;
+            if (apigeeDeveloperApp != null)
             {
-                foreach (var item in data?.credentials)
+                var credential = apigeeDeveloperApp.Credentials.OrderByDescending(p => DateTimeOffset.FromUnixTimeMilliseconds(p.IssuedAt)).First();
+                if (credential != null)
                 {
-                    string keyExpiry = item?.expiresAt;
-                    apiKey = item?.consumerKey;
-                    expiryDateTimeOffset = DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(keyExpiry));
-                    // dtDateTime = dtDateTime.(double.Parse(keyExpiry.Substring(0, keyExpiry.Length - 3))).ToLocalTime();
+                    appRecentCredential = new AppRecentCredential
+                    {
+                        AppName = apigeeDeveloperApp.Name,
+                        APIKey = credential.ConsumerKey,
+                        ExpirationDate  = DateTimeOffset.FromUnixTimeMilliseconds(credential.ExpiresAt).UtcDateTime
+                    };
                 }
             }
-
-            string responseMessage = $" APIGEE API key {apiKey} is expiring on {expiryDateTimeOffset.Date}";
-            return new OkObjectResult((expiryDateTimeOffset.DateTime - DateTime.UtcNow).Days);
+            string responseMessage = $" APIGEE API key {appRecentCredential.APIKey} is expiring on {appRecentCredential.ExpirationDate}";
+            return new OkObjectResult(appRecentCredential);
 
         }
     }
